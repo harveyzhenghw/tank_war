@@ -257,9 +257,41 @@ describe('hud snapshots', () => {
     expect(hud.wavesTotal).toBe(1)
 
     const weapons = hud.players[0].weapons
-    expect(weapons.map((weapon) => weapon.id)).toEqual(['cannon', 'mg', 'rocket', 'spread'])
+    expect(weapons.map((weapon) => weapon.id)).toEqual([
+      'cannon',
+      'mg',
+      'rocket',
+      'spread',
+      'rail',
+      'plasma',
+      'flame',
+    ])
     expect(weapons.find((weapon) => weapon.id === 'cannon')!.ammo).toBeNull()
     expect(weapons.find((weapon) => weapon.id === 'mg')!.ammo).toBeGreaterThan(0)
+    expect(hud.coins).toBe(0)
+  })
+
+  it('honours a restricted loadout and reports its weapons', () => {
+    const game = new Game({
+      mode: 'campaign',
+      mapId: 'foundry',
+      objective: 'elimination',
+      difficulty: 'normal',
+      players: 1,
+      botCount: 1,
+      seed: 33,
+      loadout: {
+        weapons: ['cannon', 'mg'],
+        skin: 'desert',
+        boosters: ['hull', 'shield'],
+      },
+    })
+    const hud = game.getHud()
+    expect(hud.players[0].weapons.map((weapon) => weapon.id)).toEqual(['cannon', 'mg'])
+    const player = game.world.tanks.find((tank) => tank.playerIndex === 0)!
+    expect(player.skin).toBe('desert')
+    expect(player.maxHp).toBe(130)
+    expect(player.shield).toBe(8)
   })
 
   it('counts down before combat starts', () => {

@@ -37,6 +37,9 @@ const DIGIT_WEAPONS: Record<string, WeaponId> = {
   Digit2: 'mg',
   Digit3: 'rocket',
   Digit4: 'spread',
+  Digit5: 'rail',
+  Digit6: 'plasma',
+  Digit7: 'flame',
 }
 
 const BLOCKED_KEYS = new Set([

@@ -3,7 +3,7 @@ import { TAU, clamp, fitView } from '../engine/math'
 import type { View } from '../engine/math'
 import { PICKUP_STATS } from '../data/balance'
 import type { Palette } from './theme'
-import { shade, tankTone } from './theme'
+import { shade, skinTone, tankTone } from './theme'
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -378,7 +378,9 @@ export class Renderer {
   }
 
   private drawTank(ctx: CanvasRenderingContext2D, tank: Tank, time: number): void {
-    const tone = tankTone(tank.team, tank.playerIndex !== null, this.palette, tank.color)
+    const skin = tank.skin ? skinTone(tank.skin, this.palette) : null
+    const tone =
+      skin ?? tankTone(tank.team, tank.playerIndex !== null, this.palette, tank.color)
 
     ctx.save()
     ctx.translate(tank.x, tank.y)
@@ -508,12 +510,22 @@ export class Renderer {
     const ctx = this.ctx
     for (const p of world.projectiles) {
       const speed = Math.hypot(p.vx, p.vy) || 1
-      const tx = p.x - (p.vx / speed) * Math.min(26, speed * 0.05)
-      const ty = p.y - (p.vy / speed) * Math.min(26, speed * 0.05)
+      const trail = p.weapon === 'rail' ? 52 : p.weapon === 'flame' ? 12 : 26
+      const tx = p.x - (p.vx / speed) * Math.min(trail, speed * 0.05)
+      const ty = p.y - (p.vy / speed) * Math.min(trail, speed * 0.05)
+
+      if (p.weapon === 'plasma') {
+        ctx.globalAlpha = 0.18
+        ctx.fillStyle = p.color
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.radius * 2.2, 0, TAU)
+        ctx.fill()
+        ctx.globalAlpha = 1
+      }
 
       ctx.strokeStyle = p.color
-      ctx.globalAlpha = 0.5
-      ctx.lineWidth = p.radius * 1.1
+      ctx.globalAlpha = p.weapon === 'rail' ? 0.9 : 0.5
+      ctx.lineWidth = p.weapon === 'flame' ? p.radius * 1.6 : p.radius * 1.1
       ctx.beginPath()
       ctx.moveTo(tx, ty)
       ctx.lineTo(p.x, p.y)

@@ -35,6 +35,10 @@ export function Hud({ hud, onPause }: Props) {
             <small>Time</small>
             <strong>{formatTime(hud.time)}</strong>
           </div>
+          <div className="stat-chip coins">
+            <small>Coins</small>
+            <strong>+{hud.coins}</strong>
+          </div>
           <div className="stat-chip">
             <small>Score</small>
             <strong>{formatScore(hud.score)}</strong>

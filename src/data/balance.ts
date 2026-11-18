@@ -75,11 +75,14 @@ export const DIFFICULTY: Record<Difficulty, BotProfile> = {
 }
 
 export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
-  easy: 'Recruit',
-  normal: 'Regular',
-  hard: 'Hardened',
-  veteran: 'Veteran',
+  easy: 'Rookie',
+  normal: 'Soldier',
+  hard: 'Veteran',
+  veteran: 'War Hero',
 }
+
+/** Coins awarded for each enemy tank destroyed by a human player. */
+export const COINS_PER_KILL = 10
 
 export const PLAYER_STATS = {
   hp: 110,

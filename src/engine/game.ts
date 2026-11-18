@@ -10,7 +10,8 @@ import type { PlayerControls, SfxName, Tank, World } from './types'
 import { EMPTY_CONTROLS } from './types'
 import { getMap } from '../data/maps'
 import { DIFFICULTY } from '../data/balance'
-import { WEAPON_ORDER } from '../data/weapons'
+import { CORE_WEAPONS, WEAPON_ORDER } from '../data/weapons'
+import { DEFAULT_SKIN } from '../data/skins'
 import {
   addPickup,
   createWorld,
@@ -43,6 +44,11 @@ function resolveOptions(options: MatchOptions): ResolvedMatchOptions {
     targetKills: options.targetKills ?? 10,
     players: options.players ?? 1,
     seed: options.seed ?? Math.floor(Math.random() * 1e9),
+    loadout: options.loadout ?? {
+      weapons: WEAPON_ORDER,
+      skin: DEFAULT_SKIN,
+      boosters: [],
+    },
   }
 }
 
@@ -90,10 +96,18 @@ export class Game {
   private setupMatch(): void {
     const w = this.world
     const spawns = w.map.playerSpawns
+    const versus = this.options.mode === 'versus'
+    const playerLoadout = versus
+      ? { weapons: CORE_WEAPONS, skin: DEFAULT_SKIN, boosters: [] }
+      : this.options.loadout
 
-    spawnPlayer(w, 0, spawns[0])
+    spawnPlayer(w, 0, spawns[0], playerLoadout)
     if (this.options.players === 2) {
-      spawnPlayer(w, 1, spawns[1] ?? spawns[0])
+      spawnPlayer(w, 1, spawns[1] ?? spawns[0], {
+        weapons: CORE_WEAPONS,
+        skin: null,
+        boosters: [],
+      })
     }
 
     if (this.options.objective !== 'versus') {
@@ -329,6 +343,7 @@ export class Game {
       levelId: this.options.levelId,
       mode: this.options.mode,
       detail,
+      coinsEarned: w.coinsEarned,
       players: players.map((p) => ({
         name: p.name,
         color: p.color,
@@ -389,7 +404,7 @@ export class Game {
   }
 
   private playerHud(tank: Tank): PlayerHud {
-    const weapons: WeaponHud[] = WEAPON_ORDER.map((id) => ({
+    const weapons: WeaponHud[] = tank.weapons.map((id) => ({
       id,
       ammo: Number.isFinite(tank.ammo[id]) ? tank.ammo[id] : null,
     }))
@@ -430,6 +445,7 @@ export class Game {
       players: players.map((p) => this.playerHud(p)),
       score: w.score,
       kills: w.kills,
+      coins: w.coinsEarned,
     }
   }
 

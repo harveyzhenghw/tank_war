@@ -13,6 +13,7 @@ import { formatScore, formatTime } from './labels'
 interface Props {
   options: MatchOptions
   settings: Settings
+  coins: number
   nextOptions?: MatchOptions
   onPlayNext: (options: MatchOptions) => void
   onExit: () => void
@@ -22,6 +23,7 @@ interface Props {
 export function GameScreen({
   options,
   settings,
+  coins,
   nextOptions,
   onPlayNext,
   onExit,
@@ -220,7 +222,17 @@ export function GameScreen({
                 <small>Time</small>
                 <strong>{formatTime(result.time)}</strong>
               </div>
+              <div className="result-stat coin-stat">
+                <small>Coins earned</small>
+                <strong>+{result.coinsEarned}</strong>
+              </div>
             </div>
+
+            <p className="result-balance">
+              {result.mode === 'versus'
+                ? 'Local versus does not earn coins'
+                : `Balance: ${coins} coins`}
+            </p>
 
             {result.players.length > 1 && (
               <div className="result-stats">

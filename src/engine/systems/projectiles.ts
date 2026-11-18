@@ -42,14 +42,20 @@ export function updateProjectiles(world: World, dt: number): void {
 
       for (const tank of world.tanks) {
         if (!tank.alive || tank.id === p.ownerId || tank.team === p.team) continue
+        if (p.hitIds.includes(tank.id)) continue
         const rr = p.radius + tank.radius
         if (distSq(p.x, p.y, tank.x, tank.y) > rr * rr) continue
         const source = world.tanks.find((t) => t.id === p.ownerId) ?? null
         damageTank(world, tank, p.damage, source)
         sparkBurst(world, p.x, p.y, p.color, 6, 160)
+        p.hitIds.push(tank.id)
         if (p.splash > 0) detonate(world, p, tank.id)
-        consumed = true
-        break
+        if (p.pierce > 0) {
+          p.pierce -= 1
+        } else {
+          consumed = true
+          break
+        }
       }
     }
 

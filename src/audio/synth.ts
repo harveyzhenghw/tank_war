@@ -142,6 +142,19 @@ export class AudioEngine {
         this.noiseBurst(0.18, 0.32, 'bandpass', 1400, 500)
         this.tone(190, 0.16, 'square', 0.1, 90)
         break
+      case 'rail':
+        this.noiseBurst(0.28, 0.3, 'highpass', 3200, 900)
+        this.tone(1800, 0.22, 'sawtooth', 0.16, 120)
+        this.tone(240, 0.3, 'sine', 0.2, 60)
+        break
+      case 'plasma':
+        this.noiseBurst(0.34, 0.24, 'bandpass', 900, 2200)
+        this.tone(320, 0.3, 'triangle', 0.18, 120)
+        this.tone(640, 0.22, 'sine', 0.09, 260, 0.03)
+        break
+      case 'flame':
+        this.noiseBurst(0.09, 0.16, 'bandpass', 1600, 700)
+        break
       case 'explosion':
         this.noiseBurst(0.7, 0.5, 'lowpass', 900, 90)
         this.tone(95, 0.55, 'sine', 0.4, 28)

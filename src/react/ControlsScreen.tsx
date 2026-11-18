@@ -50,7 +50,7 @@ export function ControlsScreen({ onBack }: Props) {
                 <td>Weapons</td>
                 <td>
                   <kbd>1</kbd> cannon · <kbd>2</kbd> MG · <kbd>3</kbd> rocket · <kbd>4</kbd>{' '}
-                  scatter
+                  scatter · <kbd>5</kbd> rail · <kbd>6</kbd> plasma · <kbd>7</kbd> flamer
                 </td>
               </tr>
               <tr>
@@ -163,10 +163,11 @@ export function ControlsScreen({ onBack }: Props) {
           <div className="panel">
             <div className="panel-title">Field manual</div>
             <p style={{ color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.65 }}>
-              Crates break — walls and rocks do not. Rockets splash, scatter shreds up close,
-              and the machine gun chews through armour at range. Pickups restore health, ammo,
-              armour, damage, speed or a temporary shield. Holding a capture zone is contested
-              while an enemy is inside it.
+              Crates break — walls and rocks do not. Rockets and plasma splash, scatter shreds
+              up close, the machine gun chews through armour at range, and the store-bought
+              railgun pierces a line of tanks. Pickups restore health, ammo, armour, damage,
+              speed or a temporary shield. Holding a capture zone is contested while an enemy
+              is inside it.
             </p>
           </div>
         </div>

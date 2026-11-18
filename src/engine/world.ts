@@ -5,8 +5,11 @@ import type { Vec2 } from './math'
 import { circleRectIntersect, pointInRect } from './math'
 import { createRng } from './rng'
 import { ENEMY_COLORS, PLAYER_STATS, PICKUP_KINDS, PICKUP_STATS, TEAM_COLORS } from '../data/balance'
-import { startingAmmo } from '../data/weapons'
-import type { Difficulty, Objective } from './types'
+import { CORE_WEAPONS, WEAPON_ORDER, startingAmmo } from '../data/weapons'
+import { DEFAULT_SKIN, SKINS } from '../data/skins'
+import { boosterEffects } from '../data/boosters'
+import type { Difficulty, Objective, SkinId, WeaponId } from './types'
+import type { Loadout } from './api'
 
 export interface WorldOptions {
   objective: Objective
@@ -48,6 +51,7 @@ export function createWorld(map: MapDef, opts: WorldOptions): World {
     kills: 0,
     deaths: 0,
     score: 0,
+    coinsEarned: 0,
     wave: opts.objective === 'survival' ? 1 : 0,
     wavesTotal: Math.max(1, opts.waves),
     waveTimer: opts.objective === 'survival' ? 3 : 0,
@@ -66,24 +70,63 @@ export function createWorld(map: MapDef, opts: WorldOptions): World {
   return world
 }
 
-export function spawnPlayer(world: World, index: number, point: Vec2): Tank {
+export function spawnPlayer(
+  world: World,
+  index: number,
+  point: Vec2,
+  loadout?: Loadout,
+): Tank {
   const hullAngle = index === 0 ? 0 : Math.PI
-  return addTank(world, {
+  const effects = loadout ? boosterEffects(loadout.boosters) : null
+  const owned = loadout ? normalizeWeapons(loadout.weapons) : WEAPON_ORDER
+  const skinDef = loadout?.skin ? SKINS[loadout.skin] ?? SKINS[DEFAULT_SKIN] : null
+  const tank = addTank(world, {
     x: point.x,
     y: point.y,
     team: index,
     playerIndex: index,
     isBot: false,
     name: index === 0 ? 'P1' : 'P2',
-    color: TEAM_COLORS[index % TEAM_COLORS.length],
-    hp: PLAYER_STATS.hp,
-    armor: PLAYER_STATS.armor,
+    color: skinDef ? skinDef.body : TEAM_COLORS[index % TEAM_COLORS.length],
+    hp: PLAYER_STATS.hp + (effects?.hp ?? 0),
+    armor: PLAYER_STATS.armor + (effects?.armor ?? 0),
     speed: PLAYER_STATS.speed,
     turnRate: PLAYER_STATS.turnRate,
     turretTurnRate: PLAYER_STATS.turretTurnRate,
     hullAngle,
     difficulty: null,
+    weapons: owned,
+    skin: skinDef ? skinDef.id : null,
+    ammo: playerAmmo(owned, effects?.ammoMul ?? 1),
+    fireScale: effects?.reloadMul ?? 1,
   })
+
+  if (effects) {
+    tank.shield = effects.startShield
+    tank.damageBoost = effects.startDamage
+  }
+  return tank
+}
+
+/** Keep only valid, unique weapon ids and guarantee the infinite-ammo cannon. */
+function normalizeWeapons(ids: WeaponId[]): WeaponId[] {
+  const owned = new Set<WeaponId>(['cannon'])
+  for (const id of ids) {
+    if (WEAPON_ORDER.includes(id)) owned.add(id)
+  }
+  return WEAPON_ORDER.filter((id) => owned.has(id))
+}
+
+function playerAmmo(weapons: WeaponId[], ammoMul: number): Record<WeaponId, number> {
+  const ammo = startingAmmo()
+  for (const id of WEAPON_ORDER) {
+    if (!weapons.includes(id)) {
+      ammo[id] = 0
+    } else if (Number.isFinite(ammo[id])) {
+      ammo[id] = Math.floor(ammo[id] * ammoMul)
+    }
+  }
+  return ammo
 }
 
 export function spawnBot(
@@ -116,6 +159,8 @@ export function spawnBot(
     hullAngle: world.rng.angle(),
     difficulty,
     fireScale: profile.fireScale,
+    weapons: CORE_WEAPONS,
+    ammo: playerAmmo(CORE_WEAPONS, 1),
   })
 }
 
@@ -135,6 +180,9 @@ interface TankInit {
   hullAngle: number
   difficulty: Difficulty | null
   fireScale?: number
+  weapons?: WeaponId[]
+  skin?: SkinId | null
+  ammo?: Record<WeaponId, number>
 }
 
 function addTank(world: World, init: TankInit): Tank {
@@ -159,7 +207,9 @@ function addTank(world: World, init: TankInit): Tank {
     turnRate: init.turnRate,
     turretTurnRate: init.turretTurnRate,
     weapon: 'cannon',
-    ammo: startingAmmo(),
+    weapons: init.weapons ?? CORE_WEAPONS,
+    ammo: init.ammo ?? startingAmmo(),
+    skin: init.skin ?? null,
     cooldown: 0,
     reloadScale: init.fireScale ?? 1,
     alive: true,

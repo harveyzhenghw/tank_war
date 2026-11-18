@@ -40,6 +40,8 @@ export function updateFiring(world: World, tank: Tank, controls: PlayerControls)
       splash: def.splash,
       color: def.color,
       armed: 0.03,
+      pierce: def.pierce,
+      hitIds: [],
     })
   }
 

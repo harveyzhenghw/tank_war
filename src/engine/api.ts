@@ -1,4 +1,18 @@
-import type { Difficulty, GameMode, GameStatus, Objective, WeaponId } from './types'
+import type {
+  BoosterId,
+  Difficulty,
+  GameMode,
+  GameStatus,
+  Objective,
+  SkinId,
+  WeaponId,
+} from './types'
+
+export interface Loadout {
+  weapons: WeaponId[]
+  skin: SkinId | null
+  boosters: BoosterId[]
+}
 
 export interface MatchOptions {
   mode: GameMode
@@ -12,6 +26,7 @@ export interface MatchOptions {
   targetKills?: number
   players?: 1 | 2
   seed?: number
+  loadout?: Loadout
 }
 
 export type ResolvedMatchOptions = Required<Omit<MatchOptions, 'levelId'>> & {
@@ -56,6 +71,7 @@ export interface HudSnapshot {
   players: PlayerHud[]
   score: number
   kills: number
+  coins: number
 }
 
 export interface MatchResult {
@@ -67,6 +83,7 @@ export interface MatchResult {
   levelId?: string
   mode: GameMode
   detail: string
+  coinsEarned: number
   players: Array<{
     name: string
     color: string

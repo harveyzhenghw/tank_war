@@ -2,7 +2,24 @@ import type { Rect, Vec2 } from './math'
 import type { Rng } from './rng'
 import type { SpatialGrid } from './spatial'
 
-export type WeaponId = 'cannon' | 'mg' | 'rocket' | 'spread'
+export type WeaponId =
+  | 'cannon'
+  | 'mg'
+  | 'rocket'
+  | 'spread'
+  | 'rail'
+  | 'plasma'
+  | 'flame'
+export type SkinId =
+  | 'field'
+  | 'desert'
+  | 'arctic'
+  | 'urban'
+  | 'crimson'
+  | 'void'
+  | 'toxic'
+  | 'gold'
+export type BoosterId = 'ammoBelt' | 'hull' | 'armour' | 'loader' | 'stim' | 'shield'
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'veteran'
 export type GameMode = 'campaign' | 'skirmish' | 'versus'
 export type Objective = 'elimination' | 'survival' | 'capture' | 'deathmatch' | 'versus'
@@ -15,6 +32,9 @@ export type SfxName =
   | 'mg'
   | 'rocket'
   | 'spread'
+  | 'rail'
+  | 'plasma'
+  | 'flame'
   | 'explosion'
   | 'hit'
   | 'pickup'
@@ -61,6 +81,8 @@ export interface Projectile {
   splash: number
   color: string
   armed: number
+  pierce: number
+  hitIds: number[]
 }
 
 export interface Particle {
@@ -114,7 +136,9 @@ export interface Tank {
   turnRate: number
   turretTurnRate: number
   weapon: WeaponId
+  weapons: WeaponId[]
   ammo: Record<WeaponId, number>
+  skin: SkinId | null
   cooldown: number
   reloadScale: number
   alive: boolean
@@ -203,6 +227,7 @@ export interface World {
   kills: number
   deaths: number
   score: number
+  coinsEarned: number
   wave: number
   wavesTotal: number
   waveTimer: number

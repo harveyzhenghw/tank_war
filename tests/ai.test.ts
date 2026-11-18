@@ -116,6 +116,9 @@ describe('chooseWeapon', () => {
       mg: ammo.mg ?? 0,
       rocket: ammo.rocket ?? 0,
       spread: ammo.spread ?? 0,
+      rail: 0,
+      plasma: 0,
+      flame: 0,
     }
     tank.cooldown = cooldown
     return tank

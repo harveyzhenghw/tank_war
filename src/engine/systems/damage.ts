@@ -1,6 +1,6 @@
 import type { Tank, World } from '../types'
 import { clamp, dist, distSq } from '../math'
-import { ARMOR_PICKUP_BONUS, SHIELD_REDUCTION } from '../../data/balance'
+import { ARMOR_PICKUP_BONUS, COINS_PER_KILL, SHIELD_REDUCTION } from '../../data/balance'
 import { explosion, floatText, sparkBurst } from './particles'
 import { damageObstacle } from '../world'
 
@@ -56,6 +56,10 @@ export function killTank(world: World, tank: Tank, source: Tank | null): void {
     if (source.playerIndex !== null) {
       world.kills += 1
       world.score += tank.playerIndex !== null ? 150 : 100
+      if (tank.isBot) {
+        world.coinsEarned += COINS_PER_KILL
+        floatText(world, tank.x, tank.y - 34, `+${COINS_PER_KILL} COINS`, '#e9b949')
+      }
     }
   }
 

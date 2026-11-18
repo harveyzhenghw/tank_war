@@ -44,7 +44,7 @@ Requires Node 18+ (developed on Node 22).
 | Manual turret   | `Q` / `E`                                    |
 | Fire            | Left mouse or `Space`                        |
 | Overdrive       | Right mouse or `Left Shift`                  |
-| Select weapon   | `1` cannon · `2` machine gun · `3` rocket · `4` scatter |
+| Select weapon   | `1` cannon · `2` machine gun · `3` rocket · `4` scatter · `5` railgun · `6` plasma · `7` flamer |
 | Cycle weapon    | `Tab`                                        |
 | Pause           | `Esc` or `P`                                 |
 
@@ -94,9 +94,9 @@ Winning an operation unlocks the next one. Progress and best scores are stored i
 
 ### Skirmish
 
-Pick any of the five arenas, the number of hostiles (1–6), a difficulty (Recruit, Regular,
-Hardened, Veteran) and either **Last tank standing** (elimination) or **Deathmatch**
-(respawns, first to the kill target).
+Pick any of the five arenas, the number of hostiles (1–6), a difficulty (**Rookie**,
+**Soldier**, **Veteran**, **War Hero**) and either **Last tank standing** (elimination) or
+**Deathmatch** (respawns, first to the kill target).
 
 ### Local Versus
 
@@ -111,9 +111,28 @@ keyboard and optionally two gamepads.
 | Machine gun   | 320         | Fast, low damage per round, best at range.          |
 | Rocket        | 8           | Slow, heavy, 76-unit splash; damages crates.        |
 | Scatter       | 28          | Five pellets, devastating up close, short range.    |
+| Railgun       | 5           | Store unlock. Hyper-velocity slug pierces two tanks. |
+| Plasma        | 10          | Store unlock. Slow orb with a 105-unit splash.       |
+| Flamer        | 260         | Store unlock. Automatic, short-range flame stream.   |
 
 Crates are destructible; walls and rocks are not. Rockets and destroyed tanks emit splash
 damage with distance falloff and a damage floor.
+
+## Store, coins and loadouts
+
+Every hostile tank destroyed by a human player earns **10 coins** in Campaign and Skirmish.
+Local Versus does not award coins, and store weapons/boosters are disabled there for
+fairness. Coins are banked when a match ends and shown on the result screen.
+
+The **Store** on the main menu sells:
+
+- **Weapons** — permanently unlock the Railgun (280), Plasma (320) and Flamer (220).
+- **Boosters** — permanent upgrades. Equip up to two: Ammo Belt, Reinforced Hull,
+  Composite Armour, Quick Loader, Combat Stim and Reactive Shield.
+- **Skins** — eight tank paint jobs, from Desert Tan (60) to Gold Commander (450).
+
+Progress, coins, unlocks, equipped skin and boosters are stored in `localStorage` under
+`tankwar.progress.v1`.
 
 ## Pickups
 
@@ -134,7 +153,8 @@ src/
     rng.ts           Seeded mulberry32 PRNG
     spatial.ts       Uniform-grid broadphase
     systems/         movement, collision, weapons, projectiles, damage, pickups, particles
-  data/              Maps (ASCII-authoring), campaign, weapons, balance profiles
+  data/              Maps (ASCII-authoring), campaign, weapons, balance, store, skins,
+                     boosters and purchase helpers
   render/            Canvas 2D renderer and colour palettes
   audio/             WebAudio synthesis (SFX + ambient music loop)
   react/             Menus, HUD, touch overlay, game screen
@@ -173,15 +193,16 @@ writes `public/icons/icon-192.png`, `icon-512.png` and a maskable variant using 
 
 ## Tests
 
-`npm test` runs 85 tests across seven suites:
+`npm test` runs 94 tests across eight suites:
 
 - `math` — circle/rect resolution, segment intersection, view fitting, angle helpers.
 - `spatial` — grid broadphase deduplication and rebuilds.
 - `maps` — every arena's spawns are free, crates are destructible, walls are not, borders
   exist, campaign references valid maps.
-- `weapons` — weapon tables, ammo, pellet spread, refill caps.
-- `damage` — armour, shields, plating cap, kill credit/score, splash falloff, crate
+- `weapons` — weapon tables, ammo, pellet spread, refill caps, piercing and store prices.
+- `damage` — armour, shields, plating cap, kill credit/score/coins, splash falloff, crate
   destruction, respawn timers.
+- `store` — purchases, affordability, skins, booster slots, loadouts and difficulty names.
 - `ai` — target preference (visibility, players), weapon choice by range and ammo.
 - `game` — versus win/loss, capture fill and contesting, deathmatch respawns and kill
   targets, survival wave timing, HUD snapshots, countdown gating, long idle simulation

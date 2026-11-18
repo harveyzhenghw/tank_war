@@ -8,6 +8,7 @@ interface Props {
   onCampaign: () => void
   onSkirmish: () => void
   onVersus: () => void
+  onStore: () => void
   onSettings: () => void
   onControls: () => void
 }
@@ -19,6 +20,7 @@ export function MainMenu({
   onCampaign,
   onSkirmish,
   onVersus,
+  onStore,
   onSettings,
   onControls,
 }: Props) {
@@ -48,6 +50,12 @@ export function MainMenu({
               <strong>Local Versus</strong>
               <small>Two players, one arena, last tank standing. Shared keyboard or pads.</small>
             </button>
+            <button className="menu-tile store-tile" onClick={onStore}>
+              <strong>Store</strong>
+              <small>
+                {progress.coins} coins · unlock weapons, boosters and tank skins.
+              </small>
+            </button>
             <button className="menu-tile" onClick={onSettings}>
               <strong>Settings</strong>
               <small>Audio, colourblind palette, touch controls and key bindings.</small>
@@ -62,6 +70,8 @@ export function MainMenu({
             <span>
               Campaign {Math.min(progress.unlocked, CAMPAIGN.length)}/{CAMPAIGN.length}
             </span>
+            <span>·</span>
+            <span className="coin-text">{progress.coins} coins</span>
             <span>·</span>
             <span>Best skirmish {progress.skirmishBest}</span>
             {canInstall && (

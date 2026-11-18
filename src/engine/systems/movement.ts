@@ -1,7 +1,6 @@
 import type { PlayerControls, Tank, World } from '../types'
 import { angleDiff, angleTo, rotateToward } from '../math'
 import { OVERDRIVE, SPEED_PICKUP_MUL } from '../../data/balance'
-import { WEAPON_ORDER } from '../../data/weapons'
 import { isInWater } from '../world'
 import { dustTrail } from './particles'
 
@@ -23,14 +22,19 @@ export function applyControls(world: World, tank: Tank, controls: PlayerControls
   tickTank(tank, dt)
   if (!tank.alive) return
 
-  // Weapon selection
-  if (controls.selectWeapon && controls.selectWeapon !== tank.weapon) {
+  // Weapon selection (only weapons in this tank's loadout)
+  if (
+    controls.selectWeapon &&
+    tank.weapons.includes(controls.selectWeapon) &&
+    controls.selectWeapon !== tank.weapon
+  ) {
     tank.weapon = controls.selectWeapon
     tank.cooldown = Math.min(tank.cooldown, 0.15)
-  } else if (controls.cycle !== 0) {
-    const idx = WEAPON_ORDER.indexOf(tank.weapon)
-    const next = (idx + Math.sign(controls.cycle) + WEAPON_ORDER.length) % WEAPON_ORDER.length
-    tank.weapon = WEAPON_ORDER[next]
+  } else if (controls.cycle !== 0 && tank.weapons.length > 0) {
+    const idx = tank.weapons.indexOf(tank.weapon)
+    const next =
+      (idx + Math.sign(controls.cycle) + tank.weapons.length) % tank.weapons.length
+    tank.weapon = tank.weapons[next]
     tank.cooldown = Math.min(tank.cooldown, 0.15)
   }
 

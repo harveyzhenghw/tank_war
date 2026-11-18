@@ -91,6 +91,7 @@ describe('damageTank', () => {
     expect(world.kills).toBe(1)
     expect(world.deaths).toBe(1)
     expect(world.score).toBe(scoreBefore + 100)
+    expect(world.coinsEarned).toBe(10)
   })
 
   it('does not award score when a bot kills the player', () => {
@@ -105,6 +106,7 @@ describe('damageTank', () => {
     expect(bot.kills).toBe(1)
     expect(world.kills).toBe(0)
     expect(world.score).toBe(scoreBefore)
+    expect(world.coinsEarned).toBe(0)
     expect(world.hitFlash).toBeGreaterThan(0)
   })
 
@@ -119,6 +121,7 @@ describe('damageTank', () => {
     expect(p2.alive).toBe(false)
     expect(p1.kills).toBe(1)
     expect(world.score).toBe(scoreBefore + 150)
+    expect(world.coinsEarned).toBe(0)
   })
 
   it('sets a respawn timer only when respawns are enabled', () => {

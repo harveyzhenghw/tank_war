@@ -17,7 +17,17 @@ import { VersusScreen } from './react/VersusScreen'
 import { SettingsScreen } from './react/SettingsScreen'
 import { ControlsScreen } from './react/ControlsScreen'
 import { GameScreen } from './react/GameScreen'
+import { StoreScreen } from './react/StoreScreen'
 import { randomSeed } from './react/labels'
+import {
+  buyBooster,
+  buySkin,
+  buyWeapon,
+  equipSkin,
+  progressLoadout,
+  toggleBooster,
+} from './data/store'
+import type { BoosterId, SkinId, WeaponId } from './engine/types'
 
 type Screen =
   | { name: 'menu' }
@@ -26,6 +36,7 @@ type Screen =
   | { name: 'versus' }
   | { name: 'settings' }
   | { name: 'controls' }
+  | { name: 'store' }
   | { name: 'game'; options: MatchOptions }
 
 interface BeforeInstallPromptEvent extends Event {
@@ -33,7 +44,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-function levelOptions(level: LevelDef): MatchOptions {
+function levelOptions(level: LevelDef, progress: Progress): MatchOptions {
   return {
     mode: 'campaign',
     mapId: level.mapId,
@@ -45,6 +56,7 @@ function levelOptions(level: LevelDef): MatchOptions {
     captureSeconds: level.captureSeconds ?? 20,
     players: 1,
     seed: randomSeed(),
+    loadout: progressLoadout(progress),
   }
 }
 
@@ -68,7 +80,13 @@ export default function App() {
 
   const handleComplete = useCallback((result: MatchResult) => {
     setProgress((previous) => {
-      const next: Progress = { ...previous, best: { ...previous.best } }
+      const next: Progress = {
+        ...previous,
+        best: { ...previous.best },
+        coins: previous.coins + (result.mode === 'versus' ? 0 : result.coinsEarned),
+        totalKills:
+          previous.totalKills + (result.mode === 'versus' ? 0 : Math.max(0, result.kills)),
+      }
       if (result.mode === 'campaign' && result.levelId && result.victory) {
         const level = CAMPAIGN.find((candidate) => candidate.id === result.levelId)
         if (level) {
@@ -96,12 +114,13 @@ export default function App() {
       ? CAMPAIGN.find((candidate) => candidate.id === screen.options.levelId)
       : undefined
     const nextLevel = level ? CAMPAIGN[level.index + 1] : undefined
-    const nextOptions = nextLevel ? levelOptions(nextLevel) : undefined
+    const nextOptions = nextLevel ? levelOptions(nextLevel, progress) : undefined
 
     return (
       <GameScreen
         options={screen.options}
         settings={settings}
+        coins={progress.coins}
         nextOptions={nextOptions}
         onPlayNext={(options) => setScreen({ name: 'game', options })}
         onExit={() =>
@@ -118,7 +137,7 @@ export default function App() {
     return (
       <CampaignScreen
         progress={progress}
-        onStart={(level) => setScreen({ name: 'game', options: levelOptions(level) })}
+        onStart={(level) => setScreen({ name: 'game', options: levelOptions(level, progress) })}
         onBack={() => setScreen({ name: 'menu' })}
       />
     )
@@ -127,7 +146,12 @@ export default function App() {
   if (screen.name === 'skirmish') {
     return (
       <SkirmishScreen
-        onStart={(options) => setScreen({ name: 'game', options })}
+        onStart={(options) =>
+          setScreen({
+            name: 'game',
+            options: { ...options, loadout: progressLoadout(progress) },
+          })
+        }
         onBack={() => setScreen({ name: 'menu' })}
       />
     )
@@ -156,6 +180,24 @@ export default function App() {
     return <ControlsScreen onBack={() => setScreen({ name: 'menu' })} />
   }
 
+  if (screen.name === 'store') {
+    return (
+      <StoreScreen
+        progress={progress}
+        onBuyWeapon={(id: WeaponId) => setProgress((previous) => buyWeapon(previous, id))}
+        onBuySkin={(id: SkinId) => setProgress((previous) => buySkin(previous, id))}
+        onEquipSkin={(id: SkinId) => setProgress((previous) => equipSkin(previous, id))}
+        onBuyBooster={(id: BoosterId) =>
+          setProgress((previous) => buyBooster(previous, id))
+        }
+        onToggleBooster={(id: BoosterId) =>
+          setProgress((previous) => toggleBooster(previous, id))
+        }
+        onBack={() => setScreen({ name: 'menu' })}
+      />
+    )
+  }
+
   return (
     <MainMenu
       progress={progress}
@@ -164,6 +206,7 @@ export default function App() {
       onCampaign={() => setScreen({ name: 'campaign' })}
       onSkirmish={() => setScreen({ name: 'skirmish' })}
       onVersus={() => setScreen({ name: 'versus' })}
+      onStore={() => setScreen({ name: 'store' })}
       onSettings={() => setScreen({ name: 'settings' })}
       onControls={() => setScreen({ name: 'controls' })}
     />

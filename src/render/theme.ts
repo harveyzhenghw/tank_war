@@ -1,4 +1,5 @@
-import type { Tank, World } from '../engine/types'
+import type { SkinId, Tank, World } from '../engine/types'
+import { SKINS } from '../data/skins'
 
 export type Palette = 'default' | 'contrast'
 
@@ -45,6 +46,20 @@ export function tankTone(team: number, isPlayer: boolean, palette: Palette, base
     turret: lighten(base, 0.18),
     barrel: lighten(base, 0.3),
     marker: '#ffe6dd',
+  }
+}
+
+/** Skin colours for a player tank, or null when the palette overrides them. */
+export function skinTone(skin: SkinId, palette: Palette): TankTone | null {
+  if (palette === 'contrast') return null
+  const def = SKINS[skin]
+  if (!def) return null
+  return {
+    body: def.body,
+    tread: def.tread,
+    turret: def.turret,
+    barrel: def.barrel,
+    marker: def.marker,
   }
 }
 
