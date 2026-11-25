@@ -8,6 +8,8 @@ interface Props {
   onCampaign: () => void
   onSkirmish: () => void
   onVersus: () => void
+  onOnline: () => void
+  onCtf: () => void
   onStore: () => void
   onSettings: () => void
   onControls: () => void
@@ -20,6 +22,8 @@ export function MainMenu({
   onCampaign,
   onSkirmish,
   onVersus,
+  onOnline,
+  onCtf,
   onStore,
   onSettings,
   onControls,
@@ -32,14 +36,14 @@ export function MainMenu({
             TANK <span>WAR</span>
           </h1>
           <div className="rule" />
-          <p className="tagline">Armoured combat · 2D · offline</p>
+          <p className="tagline">Armoured combat · 2D · online duels</p>
 
           <div className="menu-grid">
             <button className="menu-tile primary" onClick={onCampaign}>
               <strong>Campaign</strong>
               <small>
-                Five operations across the foundry, dunes, crossroads, compound and
-                ashfield.
+                Ten operations across a burning city, deserts, ruins and fortresses. Three
+                bosses and a selectable difficulty.
               </small>
             </button>
             <button className="menu-tile" onClick={onSkirmish}>
@@ -49,6 +53,19 @@ export function MainMenu({
             <button className="menu-tile" onClick={onVersus}>
               <strong>Local Versus</strong>
               <small>Two players, one arena, last tank standing. Shared keyboard or pads.</small>
+            </button>
+            <button className="menu-tile online-tile" onClick={onOnline}>
+              <strong>Online Duel</strong>
+              <small>
+                Host a PeerJS room or join with a code. Direct browser-to-browser, no game
+                server.
+              </small>
+            </button>
+            <button className="menu-tile" onClick={onCtf}>
+              <strong>Capture the Flag</strong>
+              <small>
+                A fortress road maze of switchbacks and dead ends. Blast shortcuts and steal their flag.
+              </small>
             </button>
             <button className="menu-tile store-tile" onClick={onStore}>
               <strong>Store</strong>

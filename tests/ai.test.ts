@@ -6,7 +6,7 @@ import { chooseWeapon, pickTarget } from '../src/engine/ai'
 import type { Obstacle, Tank, World } from '../src/engine/types'
 
 function makeWorld(): World {
-  return createWorld(getMap('dunes'), {
+  return createWorld(getMap('greenway'), {
     objective: 'elimination',
     difficulty: 'normal',
     seed: 99,
@@ -133,7 +133,8 @@ describe('chooseWeapon', () => {
   it('uses scatter at close range', () => {
     const tank = tankWith({ spread: 20 })
     expect(chooseWeapon(tank, 120, true)).toBe('spread')
-    expect(chooseWeapon(tank, 176, true)).toBe('cannon')
+    expect(chooseWeapon(tank, 176, true)).toBe('spread')
+    expect(chooseWeapon(tank, 190, true)).toBe('cannon')
   })
 
   it('uses rockets at long range', () => {

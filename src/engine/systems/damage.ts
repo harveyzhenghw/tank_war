@@ -3,6 +3,7 @@ import { clamp, dist, distSq } from '../math'
 import { ARMOR_PICKUP_BONUS, COINS_PER_KILL, SHIELD_REDUCTION } from '../../data/balance'
 import { explosion, floatText, sparkBurst } from './particles'
 import { damageObstacle } from '../world'
+import { dropFlag } from './flags'
 
 /**
  * Applies damage with shield / armour mitigation.
@@ -45,6 +46,8 @@ export function killTank(world: World, tank: Tank, source: Tank | null): void {
   tank.vy = 0
   tank.respawnAt = world.respawn && (tank.isBot || world.respawnPlayers) ? world.time + world.respawnDelay : null
 
+  dropFlag(world, tank.id)
+
   explosion(world, tank.x, tank.y, 42, '#ffb35c')
   world.shake = Math.min(18, world.shake + 9)
   world.events.push('explosion')
@@ -55,10 +58,11 @@ export function killTank(world: World, tank: Tank, source: Tank | null): void {
     source.kills += 1
     if (source.playerIndex !== null) {
       world.kills += 1
-      world.score += tank.playerIndex !== null ? 150 : 100
+      world.score += tank.playerIndex !== null ? 150 : tank.isBoss ? 500 : 100
       if (tank.isBot) {
-        world.coinsEarned += COINS_PER_KILL
-        floatText(world, tank.x, tank.y - 34, `+${COINS_PER_KILL} COINS`, '#e9b949')
+        const reward = tank.isBoss ? tank.bounty : COINS_PER_KILL
+        world.coinsEarned += reward
+        floatText(world, tank.x, tank.y - 34, `+${reward} COINS`, '#e9b949')
       }
     }
   }

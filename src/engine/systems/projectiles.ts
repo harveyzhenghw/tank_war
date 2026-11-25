@@ -32,7 +32,7 @@ export function updateProjectiles(world: World, dt: number): void {
       for (const obstacle of world.grid.queryCircle(p.x, p.y, p.radius)) {
         if (!obstacle.alive) continue
         if (!circleRectIntersect(p.x, p.y, p.radius, obstacle)) continue
-        if (obstacle.kind === 'crate') damageObstacle(world, obstacle, p.damage)
+        damageObstacle(world, obstacle, p.damage)
         sparkBurst(world, p.x, p.y, '#d9c7a1', 5, 130)
         if (p.splash > 0) detonate(world, p, undefined)
         consumed = true

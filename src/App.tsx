@@ -14,6 +14,8 @@ import { MainMenu } from './react/MainMenu'
 import { CampaignScreen } from './react/CampaignScreen'
 import { SkirmishScreen } from './react/SkirmishScreen'
 import { VersusScreen } from './react/VersusScreen'
+import { OnlineVersusScreen } from './react/OnlineVersusScreen'
+import { CtfScreen } from './react/CtfScreen'
 import { SettingsScreen } from './react/SettingsScreen'
 import { ControlsScreen } from './react/ControlsScreen'
 import { GameScreen } from './react/GameScreen'
@@ -27,13 +29,15 @@ import {
   progressLoadout,
   toggleBooster,
 } from './data/store'
-import type { BoosterId, SkinId, WeaponId } from './engine/types'
+import type { BoosterId, Difficulty, SkinId, WeaponId } from './engine/types'
 
 type Screen =
   | { name: 'menu' }
   | { name: 'campaign' }
   | { name: 'skirmish' }
   | { name: 'versus' }
+  | { name: 'online' }
+  | { name: 'ctf' }
   | { name: 'settings' }
   | { name: 'controls' }
   | { name: 'store' }
@@ -50,12 +54,13 @@ function levelOptions(level: LevelDef, progress: Progress): MatchOptions {
     mapId: level.mapId,
     levelId: level.id,
     objective: level.objective,
-    difficulty: level.difficulty,
+    difficulty: progress.campaignDifficulty,
     botCount: level.bots,
     waves: level.waves ?? 1,
     captureSeconds: level.captureSeconds ?? 20,
     players: 1,
     seed: randomSeed(),
+    bossId: level.bossId,
     loadout: progressLoadout(progress),
   }
 }
@@ -90,6 +95,8 @@ export default function App() {
       if (result.mode === 'campaign' && result.levelId && result.victory) {
         const level = CAMPAIGN.find((candidate) => candidate.id === result.levelId)
         if (level) {
+          const key = `${level.id}:${result.difficulty}`
+          next.best[key] = Math.max(previous.best[key] ?? 0, result.score)
           next.best[level.id] = Math.max(previous.best[level.id] ?? 0, result.score)
           next.unlocked = Math.max(
             previous.unlocked,
@@ -102,6 +109,9 @@ export default function App() {
       return next
     })
   }, [])
+
+  const setCampaignDifficulty = (difficulty: Difficulty) =>
+    setProgress((previous) => ({ ...previous, campaignDifficulty: difficulty }))
 
   const install = async () => {
     if (!installEvent) return
@@ -137,6 +147,8 @@ export default function App() {
     return (
       <CampaignScreen
         progress={progress}
+        difficulty={progress.campaignDifficulty}
+        onDifficultyChange={setCampaignDifficulty}
         onStart={(level) => setScreen({ name: 'game', options: levelOptions(level, progress) })}
         onBack={() => setScreen({ name: 'menu' })}
       />
@@ -161,6 +173,24 @@ export default function App() {
     return (
       <VersusScreen
         onStart={(options) => setScreen({ name: 'game', options })}
+        onBack={() => setScreen({ name: 'menu' })}
+      />
+    )
+  }
+
+  if (screen.name === 'online') {
+    return <OnlineVersusScreen onBack={() => setScreen({ name: 'menu' })} />
+  }
+
+  if (screen.name === 'ctf') {
+    return (
+      <CtfScreen
+        onStart={(options) =>
+          setScreen({
+            name: 'game',
+            options: { ...options, loadout: progressLoadout(progress) },
+          })
+        }
         onBack={() => setScreen({ name: 'menu' })}
       />
     )
@@ -206,6 +236,8 @@ export default function App() {
       onCampaign={() => setScreen({ name: 'campaign' })}
       onSkirmish={() => setScreen({ name: 'skirmish' })}
       onVersus={() => setScreen({ name: 'versus' })}
+      onOnline={() => setScreen({ name: 'online' })}
+      onCtf={() => setScreen({ name: 'ctf' })}
       onStore={() => setScreen({ name: 'store' })}
       onSettings={() => setScreen({ name: 'settings' })}
       onControls={() => setScreen({ name: 'controls' })}

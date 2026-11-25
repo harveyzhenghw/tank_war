@@ -27,10 +27,12 @@ export interface MatchOptions {
   players?: 1 | 2
   seed?: number
   loadout?: Loadout
+  bossId?: string
 }
 
-export type ResolvedMatchOptions = Required<Omit<MatchOptions, 'levelId'>> & {
+export type ResolvedMatchOptions = Required<Omit<MatchOptions, 'levelId' | 'bossId'>> & {
   levelId?: string
+  bossId?: string
 }
 
 export interface WeaponHud {
@@ -56,6 +58,20 @@ export interface PlayerHud {
   armorBoost: boolean
 }
 
+export interface BossHud {
+  name: string
+  title: string
+  hp: number
+  maxHp: number
+  enraged: boolean
+}
+
+export interface FlagHud {
+  owner: 'player' | 'enemy'
+  status: 'home' | 'carried' | 'dropped'
+  carrier: string | null
+}
+
 export interface HudSnapshot {
   status: GameStatus
   paused: boolean
@@ -72,6 +88,8 @@ export interface HudSnapshot {
   score: number
   kills: number
   coins: number
+  boss: BossHud | null
+  flags: FlagHud[]
 }
 
 export interface MatchResult {
@@ -82,6 +100,7 @@ export interface MatchResult {
   time: number
   levelId?: string
   mode: GameMode
+  difficulty: Difficulty
   detail: string
   coinsEarned: number
   players: Array<{

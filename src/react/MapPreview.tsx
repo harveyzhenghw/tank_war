@@ -30,7 +30,21 @@ export function MapPreview({ map, className }: Props) {
     ctx.fillStyle = map.theme.ground
     ctx.fillRect(0, 0, w, h)
 
-    ctx.globalAlpha = 0.45
+    ctx.globalAlpha = 0.7
+    for (const terrain of map.terrain) {
+      ctx.fillStyle =
+        terrain.kind === 'road'
+          ? map.theme.road
+          : terrain.kind === 'pavement'
+            ? map.theme.pavement
+            : terrain.kind === 'grass'
+              ? map.theme.grass
+              : map.theme.dirt
+      ctx.fillRect(terrain.x * sx, terrain.y * sy, terrain.w * sx, terrain.h * sy)
+    }
+    ctx.globalAlpha = 1
+
+    ctx.globalAlpha = 0.4
     for (const decor of map.decor) {
       ctx.fillStyle = map.theme.groundAlt
       ctx.beginPath()
@@ -50,8 +64,21 @@ export function MapPreview({ map, className }: Props) {
           ? map.theme.crate
           : obstacle.kind === 'rock'
             ? map.theme.rock
-            : map.theme.wall
+            : obstacle.kind === 'building'
+              ? map.theme.building
+              : obstacle.kind === 'tree'
+                ? map.theme.tree
+                : map.theme.wall
       ctx.fillRect(obstacle.x * sx, obstacle.y * sy, obstacle.w * sx, obstacle.h * sy)
+      if (obstacle.kind === 'tree') {
+        ctx.fillStyle = map.theme.treeTop
+        ctx.fillRect(
+          obstacle.x * sx + 1,
+          obstacle.y * sy + 1,
+          Math.max(1, obstacle.w * sx - 2),
+          Math.max(1, obstacle.h * sy - 2),
+        )
+      }
     }
 
     const spawn = map.playerSpawns[0]

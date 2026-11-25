@@ -18,13 +18,18 @@ export function sampleBot(world: World, tank: Tank, dt: number): PlayerControls 
     const target = pickTarget(world, tank)
     brain.targetId = target ? target.id : null
     const pickup = findPickup(world, tank)
+    const flagGoal = world.objective === 'ctf' ? ctfGoal(world, tank) : null
 
-    if (healthRatio < profile.retreatAt) brain.mode = 'retreat'
+    if (flagGoal) {
+      brain.mode = 'flag'
+    } else if (healthRatio < profile.retreatAt) brain.mode = 'retreat'
     else if (target) brain.mode = 'engage'
     else if (pickup) brain.mode = 'pickup'
     else brain.mode = 'patrol'
 
-    if (brain.mode === 'pickup' && pickup) {
+    if (flagGoal) {
+      brain.waypoint = flagGoal
+    } else if (brain.mode === 'pickup' && pickup) {
       brain.waypoint = { x: pickup.x, y: pickup.y }
     }
     if (
@@ -93,6 +98,10 @@ export function sampleBot(world: World, tank: Tank, dt: number): PlayerControls 
       desired = angleTo(tank.x, tank.y, brain.waypoint.x, brain.waypoint.y)
     }
     throttle = 1
+  } else if (brain.mode === 'flag' && brain.waypoint) {
+    const d = dist(tank.x, tank.y, brain.waypoint.x, brain.waypoint.y)
+    desired = angleTo(tank.x, tank.y, brain.waypoint.x, brain.waypoint.y)
+    throttle = d < 90 ? 0.7 : 1
   } else if (brain.waypoint) {
     const d = dist(tank.x, tank.y, brain.waypoint.x, brain.waypoint.y)
     if (d < 28) {
@@ -174,12 +183,35 @@ export function pickTarget(world: World, tank: Tank): Tank | null {
 
 /** Weapon choice by range. Exposed for tuning and tests. */
 export function chooseWeapon(tank: Tank, distance: number, visible: boolean): WeaponId {
-  if (!visible) return tank.weapon === 'cannon' ? 'cannon' : 'cannon'
+  if (!visible) return 'cannon'
   const ammo = tank.ammo
-  if (distance < 175 && ammo.spread > 0) return 'spread'
+  if (distance < 150 && ammo.flame > 0) return 'flame'
+  if (distance < 185 && ammo.spread > 0) return 'spread'
+  if (distance > 540 && ammo.rail > 0) return 'rail'
+  if (distance > 300 && ammo.plasma > 0) return 'plasma'
   if (distance > 340 && ammo.rocket > 0) return 'rocket'
   if (distance < 470 && ammo.mg > 0 && tank.cooldown > 0.35) return 'mg'
   return 'cannon'
+}
+
+/** Objective waypoint for bots in capture-the-flag matches. */
+function ctfGoal(world: World, tank: Tank): { x: number; y: number } | null {
+  if (world.flags.length < 2) return null
+  const ownFlag = world.flags.find((flag) => flag.team === tank.team)
+  const enemyFlag = world.flags.find((flag) => flag.team !== tank.team)
+  if (!ownFlag || !enemyFlag) return null
+
+  const carrying = ownFlag.carriedBy === tank.id || enemyFlag.carriedBy === tank.id
+  if (carrying) return { x: ownFlag.homeX, y: ownFlag.homeY }
+
+  if (ownFlag.carriedBy !== null) {
+    const carrier = world.tanks.find((candidate) => candidate.id === ownFlag.carriedBy)
+    if (carrier) return { x: carrier.x, y: carrier.y }
+  }
+
+  // Roughly one in three bots stays home to defend; the rest hunt the flag.
+  if (tank.id % 3 === 0) return { x: ownFlag.homeX, y: ownFlag.homeY }
+  return { x: enemyFlag.x, y: enemyFlag.y }
 }
 
 function findPickup(world: World, tank: Tank): Pickup | null {

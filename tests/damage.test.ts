@@ -11,7 +11,7 @@ import {
 import type { Tank, World } from '../src/engine/types'
 
 function makeWorld(): World {
-  return createWorld(getMap('dunes'), {
+  return createWorld(getMap('greenway'), {
     objective: 'elimination',
     difficulty: 'normal',
     seed: 42,
@@ -171,11 +171,15 @@ describe('splashDamage', () => {
     expect(playerHp).toBe(player.hp)
   })
 
-  it('damages and eventually destroys crates but not walls', () => {
+  it('damages and eventually destroys crates, rocks and trees but not walls', () => {
     const world = makeWorld()
     const crate = world.obstacles.find((o) => o.kind === 'crate')
+    const rock = world.obstacles.find((o) => o.kind === 'rock')
+    const tree = world.obstacles.find((o) => o.kind === 'tree')
     const wall = world.obstacles.find((o) => o.kind === 'wall')
     expect(crate).toBeDefined()
+    expect(rock).toBeDefined()
+    expect(tree).toBeDefined()
     expect(wall).toBeDefined()
 
     const cx = crate!.x + crate!.w / 2
@@ -188,8 +192,38 @@ describe('splashDamage', () => {
     expect(world.obstacles.includes(crate!)).toBe(true)
     expect(world.grid.queryRect(crate!).includes(crate!)).toBe(false)
 
+    const rx = rock!.x + rock!.w / 2
+    const ry = rock!.y + rock!.h / 2
+    splashDamage(world, rx, ry, 60, 1000, 0, null)
+    expect(rock!.alive).toBe(false)
+    expect(world.grid.queryRect(rock!).includes(rock!)).toBe(false)
+
+    const tx = tree!.x + tree!.w / 2
+    const ty = tree!.y + tree!.h / 2
+    splashDamage(world, tx, ty, 60, 1000, 0, null)
+    expect(tree!.alive).toBe(false)
+
     splashDamage(world, wall!.x + wall!.w / 2, wall!.y + wall!.h / 2, 50, 500, 0, null)
     expect(wall!.alive).toBe(true)
+  })
+
+  it('levels buildings in the city', () => {
+    const world = createWorld(getMap('downtown'), {
+      objective: 'elimination',
+      difficulty: 'normal',
+      seed: 7,
+      waves: 1,
+      captureSeconds: 20,
+    })
+    const building = world.obstacles.find((o) => o.kind === 'building')
+    expect(building).toBeDefined()
+    expect(Number.isFinite(building!.hp)).toBe(true)
+
+    const bx = building!.x + building!.w / 2
+    const by = building!.y + building!.h / 2
+    splashDamage(world, bx, by, 90, 1000, 0, null)
+    expect(building!.alive).toBe(false)
+    expect(world.grid.queryRect(building!).includes(building!)).toBe(false)
   })
 })
 

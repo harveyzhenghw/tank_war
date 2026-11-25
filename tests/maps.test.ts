@@ -44,17 +44,26 @@ describe.each(MAPS.map((map) => [map.id, map] as const))('map %s', (_id, map) =>
     }
   })
 
-  it('builds destructible crates and solid walls', () => {
-    const crates = map.obstacles.filter((o) => o.kind === 'crate')
+  it('builds destructible cover and solid walls', () => {
+    const destructibles = map.obstacles.filter((o) => o.kind !== 'wall')
     const walls = map.obstacles.filter((o) => o.kind === 'wall')
-    expect(crates.length).toBeGreaterThan(0)
+    expect(destructibles.length).toBeGreaterThan(0)
     expect(walls.length).toBeGreaterThan(0)
-    for (const crate of crates) {
-      expect(crate.hp).toBeGreaterThan(0)
-      expect(Number.isFinite(crate.hp)).toBe(true)
+    for (const obstacle of destructibles) {
+      expect(obstacle.hp).toBeGreaterThan(0)
+      expect(Number.isFinite(obstacle.hp)).toBe(true)
+      expect(obstacle.maxHp).toBe(obstacle.hp)
     }
     for (const wall of walls) {
       expect(wall.hp).toBe(Number.POSITIVE_INFINITY)
+    }
+  })
+
+  it('paints terrain under the battlefield', () => {
+    expect(map.terrain.length).toBeGreaterThan(0)
+    for (const terrain of map.terrain) {
+      expect(terrain.w).toBeGreaterThan(0)
+      expect(terrain.h).toBeGreaterThan(0)
     }
   })
 
@@ -63,41 +72,107 @@ describe.each(MAPS.map((map) => [map.id, map] as const))('map %s', (_id, map) =>
       (o) => o.kind === 'wall' && (o.x === 0 || o.y === 0 || o.x + o.w >= map.width || o.y + o.h >= map.height),
     )
     expect(borderWalls.length).toBeGreaterThan(0)
-    const leftWall = borderWalls.find((o) => o.x === 0 && o.h > map.cell)
+    const leftWall = borderWalls.find(
+      (o) => o.x === 0 && o.w <= map.cell * 2 && o.h >= map.height / 2,
+    )
     expect(leftWall).toBeDefined()
     expect(circleRectIntersect(4, map.height / 2, 3, leftWall!)).toBe(true)
   })
 
-  it('spaces obstacles away from the exact map centre', () => {
-    // Capture mode needs a usable zone at the centre; propose where it would be.
+  it('keeps the centre clear on the capture arena', () => {
+    // Capture mode needs a usable 220x170 zone at the centre of the village.
     const zone = { x: map.width / 2 - 110, y: map.height / 2 - 85, w: 220, h: 170 }
-    const blocked = map.obstacles.some((o) => {
-      if (o.kind !== 'wall') return false
-      return (
+    const blocked = map.obstacles.filter(
+      (o) =>
         o.x < zone.x + zone.w &&
         o.x + o.w > zone.x &&
         o.y < zone.y + zone.h &&
-        o.y + o.h > zone.y
-      )
-    })
-    if (map.id === 'compound' || map.id === 'ashfield') {
-      // These maps intentionally have a central bunker; capture levels use compound.
+        o.y + o.h > zone.y,
+    )
+    if (map.id === 'village') {
+      expect(blocked).toHaveLength(0)
+    } else {
+      expect(Array.isArray(blocked)).toBe(true)
     }
-    expect(typeof blocked).toBe('boolean')
   })
 })
 
 describe('map registry', () => {
-  it('exposes all five arenas', () => {
-    expect(MAPS).toHaveLength(5)
+  it('exposes all ten themed arenas', () => {
+    expect(MAPS).toHaveLength(10)
+    expect(MAPS.map((map) => map.id)).toEqual([
+      'downtown',
+      'greenway',
+      'foundry',
+      'village',
+      'ashfield',
+      'dunes',
+      'crossroads',
+      'compound',
+      'frontier',
+      'citadel',
+    ])
+    expect(MAPS.map((map) => map.biome)).toEqual([
+      'city',
+      'park',
+      'industrial',
+      'village',
+      'ruins',
+      'desert',
+      'city',
+      'industrial',
+      'park',
+      'ruins',
+    ])
     expect(getMap('foundry').name).toBe('Foundry')
+    expect(getMap('downtown').name).toBe('Downtown')
+    expect(getMap('greenway').name).toBe('Greenway')
+    expect(getMap('village').name).toBe('Village')
+    expect(getMap('ashfield').name).toBe('Ashfield')
+    expect(getMap('dunes').name).toBe('Dunes')
+    expect(getMap('crossroads').name).toBe('Crossroads')
+    expect(getMap('compound').name).toBe('Compound')
+    expect(getMap('frontier').name).toBe('Frontier')
+    expect(getMap('citadel').name).toBe('Citadel')
+  })
+
+  it('gives the frontier a larger follow-camera arena with two flags', () => {
+    const frontier = getMap('frontier')
+    expect(frontier.width).toBeGreaterThan(getMap('downtown').width)
+    expect(frontier.height).toBeGreaterThan(getMap('downtown').height)
+    expect(frontier.camera).toBe('follow')
+    expect(frontier.flagPoints).not.toBeNull()
+    expect(frontier.flagPoints!.player).not.toEqual(frontier.flagPoints!.enemy)
+    for (const map of MAPS) {
+      if (map.id !== 'frontier') expect(map.flagPoints).toBeNull()
+    }
+  })
+
+  it('gives the city and ruins destructible buildings', () => {
+    for (const id of ['downtown', 'ashfield']) {
+      const buildings = getMap(id).obstacles.filter((o) => o.kind === 'building')
+      expect(buildings.length).toBeGreaterThan(0)
+      for (const building of buildings) {
+        expect(Number.isFinite(building.hp)).toBe(true)
+      }
+    }
   })
 
   it('campaign references real maps', () => {
+    expect(CAMPAIGN).toHaveLength(10)
     for (const level of CAMPAIGN) {
       expect(() => getMap(level.mapId)).not.toThrow()
       expect(level.index).toBe(CAMPAIGN.indexOf(level))
     }
+  })
+
+  it('places bosses on the expected operations', () => {
+    expect(CAMPAIGN[4].bossId).toBe('ironMarshal')
+    expect(CAMPAIGN[7].bossId).toBe('warden')
+    expect(CAMPAIGN[9].bossId).toBe('sovereign')
+    expect(CAMPAIGN[8].objective).toBe('ctf')
+    expect(CAMPAIGN[8].mapId).toBe('frontier')
+    expect(CAMPAIGN.filter((level) => level.bossId)).toHaveLength(3)
   })
 
   it('has no obstacles outside the map bounds', () => {

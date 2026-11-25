@@ -21,9 +21,17 @@ export type SkinId =
   | 'gold'
 export type BoosterId = 'ammoBelt' | 'hull' | 'armour' | 'loader' | 'stim' | 'shield'
 export type Difficulty = 'easy' | 'normal' | 'hard' | 'veteran'
-export type GameMode = 'campaign' | 'skirmish' | 'versus'
-export type Objective = 'elimination' | 'survival' | 'capture' | 'deathmatch' | 'versus'
-export type ObstacleKind = 'wall' | 'crate' | 'rock'
+export type GameMode = 'campaign' | 'skirmish' | 'versus' | 'ctf'
+export type Objective =
+  | 'elimination'
+  | 'survival'
+  | 'capture'
+  | 'deathmatch'
+  | 'versus'
+  | 'ctf'
+export type Biome = 'city' | 'park' | 'industrial' | 'village' | 'ruins' | 'desert'
+export type ObstacleKind = 'wall' | 'crate' | 'rock' | 'building' | 'tree'
+export type TerrainKind = 'road' | 'pavement' | 'grass' | 'dirt'
 export type PickupKind = 'health' | 'armor' | 'damage' | 'speed' | 'ammo' | 'shield'
 export type GameStatus = 'playing' | 'won' | 'lost'
 export type ParticleKind = 'spark' | 'smoke' | 'ring' | 'debris' | 'text' | 'flash'
@@ -45,7 +53,7 @@ export type SfxName =
   | 'lose'
   | 'wave'
 
-export type BotMode = 'patrol' | 'engage' | 'retreat' | 'pickup'
+export type BotMode = 'patrol' | 'engage' | 'retreat' | 'pickup' | 'flag'
 
 export interface Obstacle extends Rect {
   id: number
@@ -159,6 +167,27 @@ export interface Tank {
   deaths: number
   lastHitBy: number | null
   ai: BotBrain | null
+  isBoss: boolean
+  bossName: string | null
+  bossTitle: string | null
+  enraged: boolean
+  damageScale: number
+  bounty: number
+}
+
+export interface FlagState {
+  /** Team that owns this flag. Team 0 is the player side. */
+  team: number
+  x: number
+  y: number
+  homeX: number
+  homeY: number
+  /** Tank id currently carrying this flag, or null. */
+  carriedBy: number | null
+  dropped: boolean
+  returnTimer: number
+  /** True once the player side has spotted the enemy flag. */
+  revealed: boolean
 }
 
 export interface CaptureZone extends Rect {
@@ -181,6 +210,19 @@ export interface MapTheme {
   waterEdge: string
   accent: string
   shadow: string
+  road: string
+  roadLine: string
+  pavement: string
+  grass: string
+  dirt: string
+  building: string
+  buildingRoof: string
+  tree: string
+  treeTop: string
+}
+
+export interface TerrainRect extends Rect {
+  kind: TerrainKind
 }
 
 export interface Decor {
@@ -194,6 +236,7 @@ export interface MapDef {
   id: string
   name: string
   description: string
+  biome: Biome
   theme: MapTheme
   width: number
   height: number
@@ -202,10 +245,14 @@ export interface MapDef {
   gridRows: number
   obstacles: Obstacle[]
   water: Rect[]
+  terrain: TerrainRect[]
   decor: Decor[]
   playerSpawns: Vec2[]
   botSpawns: Vec2[]
   pickupPoints: Vec2[]
+  /** Large arenas can use a player-following camera instead of fitting the whole map. */
+  camera: 'fit' | 'follow'
+  flagPoints: { player: Vec2; enemy: Vec2 } | null
 }
 
 export interface World {
@@ -218,6 +265,7 @@ export interface World {
   particles: Particle[]
   pickups: Pickup[]
   zone: CaptureZone | null
+  flags: FlagState[]
   objective: Objective
   status: GameStatus
   time: number

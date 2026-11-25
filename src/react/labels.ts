@@ -6,6 +6,7 @@ export const OBJECTIVE_LABEL: Record<Objective, string> = {
   capture: 'Capture',
   deathmatch: 'Deathmatch',
   versus: 'Versus',
+  ctf: 'Capture the Flag',
 }
 
 export function formatTime(seconds: number): string {

@@ -169,6 +169,11 @@ export function ControlsScreen({ onBack }: Props) {
               speed or a temporary shield. Holding a capture zone is contested while an enemy
               is inside it.
             </p>
+            <p style={{ color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.65, marginTop: 10 }}>
+              In Capture the Flag, drive over the enemy flag to take it and return to your own
+              flag to score. Carriers move slower and drop the flag when destroyed. Bosses
+              enrage below half health, so finish them quickly.
+            </p>
           </div>
         </div>
       </div>

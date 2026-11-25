@@ -18,7 +18,7 @@ export function updateFiring(world: World, tank: Tank, controls: PlayerControls)
     return
   }
 
-  const boost = tank.damageBoost > 0 ? DAMAGE_PICKUP_MUL : 1
+  const boost = (tank.damageBoost > 0 ? DAMAGE_PICKUP_MUL : 1) * tank.damageScale
   const muzzleX = tank.x + Math.cos(tank.turretAngle) * (def.barrel + tank.radius * 0.5)
   const muzzleY = tank.y + Math.sin(tank.turretAngle) * (def.barrel + tank.radius * 0.5)
 

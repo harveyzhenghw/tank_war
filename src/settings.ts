@@ -1,6 +1,6 @@
 import type { KeyBinds } from './engine/input'
 import { DEFAULT_BINDS } from './engine/input'
-import type { BoosterId, SkinId, WeaponId } from './engine/types'
+import type { BoosterId, Difficulty, SkinId, WeaponId } from './engine/types'
 import { CORE_WEAPONS, isWeaponId } from './data/weapons'
 import { MAX_EQUIPPED_BOOSTERS, isBoosterId } from './data/boosters'
 import { DEFAULT_SKIN, isSkinId } from './data/skins'
@@ -65,6 +65,15 @@ export interface Progress {
   equippedSkin: SkinId
   ownedBoosters: BoosterId[]
   equippedBoosters: BoosterId[]
+  campaignDifficulty: Difficulty
+}
+
+const MAX_UNLOCKED = 10
+
+const DIFFICULTY_IDS: Difficulty[] = ['easy', 'normal', 'hard', 'veteran']
+
+function isDifficulty(value: unknown): value is Difficulty {
+  return typeof value === 'string' && (DIFFICULTY_IDS as string[]).includes(value)
 }
 
 export const DEFAULT_PROGRESS: Progress = {
@@ -78,6 +87,7 @@ export const DEFAULT_PROGRESS: Progress = {
   equippedSkin: DEFAULT_SKIN,
   ownedBoosters: [],
   equippedBoosters: [],
+  campaignDifficulty: 'normal',
 }
 
 function validIds<T extends string>(
@@ -118,7 +128,7 @@ export function loadProgress(): Progress {
       ...DEFAULT_PROGRESS,
       ...parsed,
       best: { ...(parsed.best ?? {}) },
-      unlocked: Math.max(1, Math.min(5, parsed.unlocked ?? 1)),
+      unlocked: Math.max(1, Math.min(MAX_UNLOCKED, parsed.unlocked ?? 1)),
       coins: Math.max(0, Math.floor(parsed.coins ?? 0)),
       totalKills: Math.max(0, Math.floor(parsed.totalKills ?? 0)),
       ownedWeapons,
@@ -126,6 +136,9 @@ export function loadProgress(): Progress {
       equippedSkin,
       ownedBoosters,
       equippedBoosters,
+      campaignDifficulty: isDifficulty(parsed.campaignDifficulty)
+        ? parsed.campaignDifficulty
+        : 'normal',
     }
   } catch {
     return { ...DEFAULT_PROGRESS, best: {}, ownedWeapons: [...CORE_WEAPONS] }

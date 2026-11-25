@@ -176,6 +176,40 @@ export function fitView(worldW: number, worldH: number, viewW: number, viewH: nu
   }
 }
 
+/**
+ * A zoomed camera that follows a point while staying inside the map bounds.
+ * Used by large capture-the-flag arenas.
+ */
+export function followView(
+  worldW: number,
+  worldH: number,
+  viewW: number,
+  viewH: number,
+  focusX: number,
+  focusY: number,
+): View {
+  if (worldW <= 0 || worldH <= 0 || viewW <= 0 || viewH <= 0) {
+    return { scale: 1, offsetX: 0, offsetY: 0 }
+  }
+
+  const scale = clamp(Math.max(viewW / 1100, viewH / 750), 0.55, 1.4)
+  const scaledW = worldW * scale
+  const scaledH = worldH * scale
+
+  const minX = Math.min(0, viewW - scaledW)
+  const minY = Math.min(0, viewH - scaledH)
+  const offsetX =
+    scaledW <= viewW
+      ? (viewW - scaledW) / 2
+      : clamp(viewW / 2 - focusX * scale, minX, 0)
+  const offsetY =
+    scaledH <= viewH
+      ? (viewH - scaledH) / 2
+      : clamp(viewH / 2 - focusY * scale, minY, 0)
+
+  return { scale, offsetX, offsetY }
+}
+
 export function screenToWorld(view: View, sx: number, sy: number): Vec2 {
   return { x: (sx - view.offsetX) / view.scale, y: (sy - view.offsetY) / view.scale }
 }

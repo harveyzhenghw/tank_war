@@ -98,6 +98,16 @@ export const ENEMY_COLORS = ['#d6674f', '#c9543f', '#e07a4a', '#b84f45', '#d98a4
 
 export const OVERDRIVE = { duration: 1.5, cooldown: 6.5, speedMul: 1.7 }
 
+/** Capture-the-flag tuning. */
+export const FLAG_RETURN_TIME = 18
+export const FLAG_CARRY_SPEED = 0.86
+export const FLAG_PICKUP_RADIUS = 24
+export const FLAG_CAPTURE_COINS = 50
+export const FLAG_CAPTURE_SCORE = 500
+
+/** Bosses gain reload and damage when they drop below this health fraction. */
+export const BOSS_ENRAGE_AT = 0.5
+
 export const SHIELD_REDUCTION = 0.55
 export const ARMOR_PICKUP_BONUS = 0.18
 export const DAMAGE_PICKUP_MUL = 1.6

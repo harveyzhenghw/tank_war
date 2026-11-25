@@ -1,8 +1,9 @@
 import type { PlayerControls, Tank, World } from '../types'
 import { angleDiff, angleTo, rotateToward } from '../math'
-import { OVERDRIVE, SPEED_PICKUP_MUL } from '../../data/balance'
+import { OVERDRIVE, FLAG_CARRY_SPEED, SPEED_PICKUP_MUL } from '../../data/balance'
 import { isInWater } from '../world'
 import { dustTrail } from './particles'
+import { isCarryingFlag } from './flags'
 
 /** Advances per-tank timers. Safe to call for dead tanks. */
 export function tickTank(tank: Tank, dt: number): void {
@@ -51,6 +52,7 @@ export function applyControls(world: World, tank: Tank, controls: PlayerControls
   let speedMul = 1
   if (tank.overdrive > 0) speedMul *= OVERDRIVE.speedMul
   if (tank.speedBoost > 0) speedMul *= SPEED_PICKUP_MUL
+  if (isCarryingFlag(world, tank.id)) speedMul *= FLAG_CARRY_SPEED
   if (isInWater(world, tank.x, tank.y)) speedMul *= 0.55
 
   if (mag > 0.06) {

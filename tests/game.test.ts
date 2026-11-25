@@ -90,7 +90,7 @@ describe('capture', () => {
   it('fills the zone and wins while unopposed', () => {
     const game = new Game({
       mode: 'campaign',
-      mapId: 'compound',
+      mapId: 'village',
       objective: 'capture',
       difficulty: 'easy',
       players: 1,
@@ -124,7 +124,7 @@ describe('capture', () => {
   it('pauses progress while an enemy contests the zone', () => {
     const game = new Game({
       mode: 'campaign',
-      mapId: 'compound',
+      mapId: 'village',
       objective: 'capture',
       difficulty: 'easy',
       players: 1,
@@ -156,7 +156,7 @@ describe('deathmatch', () => {
   it('respawns destroyed bots after the delay', () => {
     const game = new Game({
       mode: 'skirmish',
-      mapId: 'dunes',
+      mapId: 'greenway',
       objective: 'deathmatch',
       difficulty: 'easy',
       players: 1,
@@ -182,7 +182,7 @@ describe('deathmatch', () => {
   it('ends as soon as the kill target is reached', () => {
     const game = new Game({
       mode: 'skirmish',
-      mapId: 'dunes',
+      mapId: 'greenway',
       objective: 'deathmatch',
       difficulty: 'easy',
       players: 1,
@@ -311,6 +311,137 @@ describe('hud snapshots', () => {
     advance(game, 1.5)
     expect(game.getHud().countdown).toBe(0)
     expect(game.world.time).toBeGreaterThan(0)
+  })
+})
+
+describe('capture the flag', () => {
+  it('places both flags and wins when the player carries the enemy flag home', () => {
+    const game = new Game({
+      mode: 'ctf',
+      mapId: 'frontier',
+      objective: 'ctf',
+      difficulty: 'normal',
+      players: 1,
+      botCount: 0,
+      seed: 91,
+    })
+    let result: MatchResult | null = null
+    game.onEnd = (value) => {
+      result = value
+    }
+
+    advance(game, 3.2)
+    const points = game.world.map.flagPoints!
+    expect(game.world.flags).toHaveLength(2)
+
+    const player = players(game)[0]
+    player.spawnProtection = 0
+    player.x = points.enemy.x
+    player.y = points.enemy.y
+    advance(game, 0.1)
+
+    const enemyFlag = game.world.flags.find((flag) => flag.team === 1)!
+    expect(enemyFlag.carriedBy).toBe(player.id)
+    expect(game.getHud().flags).toHaveLength(2)
+
+    player.x = points.player.x
+    player.y = points.player.y
+    advance(game, 1.5)
+
+    expect(result).not.toBeNull()
+    expect(result!.victory).toBe(true)
+    expect(result!.mode).toBe('ctf')
+    expect(result!.difficulty).toBe('normal')
+    expect(result!.detail.toLowerCase()).toContain('flag')
+  })
+
+  it('loses if the enemy carries your flag home', () => {
+    const game = new Game({
+      mode: 'ctf',
+      mapId: 'frontier',
+      objective: 'ctf',
+      difficulty: 'normal',
+      players: 1,
+      botCount: 1,
+      seed: 92,
+    })
+    let result: MatchResult | null = null
+    game.onEnd = (value) => {
+      result = value
+    }
+
+    advance(game, 3.2)
+    const points = game.world.map.flagPoints!
+    const player = players(game)[0]
+    player.spawnProtection = 0
+    const bot = game.world.tanks.find((tank) => tank.isBot)!
+    bot.ai = null
+    bot.spawnProtection = 0
+
+    bot.x = points.player.x
+    bot.y = points.player.y
+    advance(game, 0.1)
+    const ownFlag = game.world.flags.find((flag) => flag.team === 0)!
+    expect(ownFlag.carriedBy).toBe(bot.id)
+
+    bot.x = points.enemy.x
+    bot.y = points.enemy.y
+    advance(game, 1.5)
+
+    expect(result).not.toBeNull()
+    expect(result!.victory).toBe(false)
+    expect(result!.detail.toLowerCase()).toContain('flag')
+  })
+})
+
+describe('bosses', () => {
+  it('spawns the named boss with scaled hull and reports it in the HUD', () => {
+    const game = new Game({
+      mode: 'campaign',
+      mapId: 'ashfield',
+      levelId: 'l5',
+      objective: 'elimination',
+      difficulty: 'hard',
+      players: 1,
+      botCount: 3,
+      bossId: 'ironMarshal',
+      seed: 71,
+    })
+
+    const boss = game.world.tanks.find((tank) => tank.isBoss)!
+    expect(boss).toBeTruthy()
+    expect(boss.bossName).toBe('Iron Marshal')
+    expect(boss.maxHp).toBeGreaterThan(1150)
+    expect(boss.bounty).toBeGreaterThan(0)
+
+    const hud = game.getHud()
+    expect(hud.boss).not.toBeNull()
+    expect(hud.boss!.name).toBe('Iron Marshal')
+    expect(hud.boss!.maxHp).toBe(boss.maxHp)
+  })
+
+  it('enrages below half health', () => {
+    const game = new Game({
+      mode: 'campaign',
+      mapId: 'ashfield',
+      levelId: 'l5',
+      objective: 'elimination',
+      difficulty: 'normal',
+      players: 1,
+      botCount: 0,
+      bossId: 'ironMarshal',
+      seed: 72,
+    })
+
+    advance(game, 3.2)
+    const boss = game.world.tanks.find((tank) => tank.isBoss)!
+    const reload = boss.reloadScale
+    boss.hp = boss.maxHp * 0.4
+    advance(game, 0.1)
+
+    expect(boss.enraged).toBe(true)
+    expect(boss.reloadScale).toBeGreaterThan(reload)
+    expect(game.getHud().boss!.enraged).toBe(true)
   })
 })
 

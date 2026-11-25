@@ -1,4 +1,4 @@
-import type { HudSnapshot, PlayerHud } from '../engine/api'
+import type { FlagHud, HudSnapshot, PlayerHud } from '../engine/api'
 import { WEAPONS } from '../data/weapons'
 import { OBJECTIVE_LABEL, formatScore, formatTime } from './labels'
 
@@ -49,6 +49,30 @@ export function Hud({ hud, onPause }: Props) {
         </div>
       </div>
 
+      {hud.flags.length > 0 && (
+        <div className="flag-strip">
+          {hud.flags.map((flag) => (
+            <FlagChip key={flag.owner} flag={flag} />
+          ))}
+        </div>
+      )}
+
+      {hud.boss && (
+        <div className={`boss-bar ${hud.boss.enraged ? 'enraged' : ''}`}>
+          <div className="boss-head">
+            <strong>{hud.boss.name}</strong>
+            <span>{hud.boss.enraged ? 'ENRAGED' : hud.boss.title}</span>
+          </div>
+          <div className="bar boss">
+            <i
+              style={{
+                width: `${Math.max(0, Math.round((hud.boss.hp / hud.boss.maxHp) * 100))}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {hud.message && (
         <div className="hud-message" key={hud.message}>
           {hud.message}
@@ -60,6 +84,25 @@ export function Hud({ hud, onPause }: Props) {
           <span key={Math.ceil(hud.countdown)}>{Math.ceil(hud.countdown)}</span>
         </div>
       )}
+    </div>
+  )
+}
+
+function FlagChip({ flag }: { flag: FlagHud }) {
+  const label = flag.owner === 'player' ? 'Your flag' : 'Enemy flag'
+  const detail =
+    flag.status === 'home'
+      ? 'At base'
+      : flag.status === 'dropped'
+        ? 'Dropped'
+        : `${flag.carrier ?? 'Unknown'} carrying`
+  return (
+    <div className={`flag-chip ${flag.owner} ${flag.status}`}>
+      <span className="flag-mark" />
+      <div>
+        <small>{label}</small>
+        <strong>{detail}</strong>
+      </div>
     </div>
   )
 }

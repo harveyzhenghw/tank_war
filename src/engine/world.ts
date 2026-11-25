@@ -4,12 +4,14 @@ import type { MapDef } from './types'
 import type { Vec2 } from './math'
 import { circleRectIntersect, pointInRect } from './math'
 import { createRng } from './rng'
-import { ENEMY_COLORS, PLAYER_STATS, PICKUP_KINDS, PICKUP_STATS, TEAM_COLORS } from '../data/balance'
+import { ENEMY_COLORS, PLAYER_STATS, PICKUP_KINDS, PICKUP_STATS, TEAM_COLORS, COINS_PER_KILL } from '../data/balance'
 import { CORE_WEAPONS, WEAPON_ORDER, startingAmmo } from '../data/weapons'
 import { DEFAULT_SKIN, SKINS } from '../data/skins'
 import { boosterEffects } from '../data/boosters'
+import { bossAmmo, bossDifficultyScale, type BossDef } from '../data/bosses'
 import type { Difficulty, Objective, SkinId, WeaponId } from './types'
 import type { Loadout } from './api'
+import { debris, ring, smokePuff } from './systems/particles'
 
 export interface WorldOptions {
   objective: Objective
@@ -30,6 +32,7 @@ export function createWorld(map: MapDef, opts: WorldOptions): World {
     projectiles: [],
     particles: [],
     pickups: [],
+    flags: [],
     zone:
       opts.objective === 'capture'
         ? {
@@ -75,6 +78,7 @@ export function spawnPlayer(
   index: number,
   point: Vec2,
   loadout?: Loadout,
+  team = index,
 ): Tank {
   const hullAngle = index === 0 ? 0 : Math.PI
   const effects = loadout ? boosterEffects(loadout.boosters) : null
@@ -83,7 +87,7 @@ export function spawnPlayer(
   const tank = addTank(world, {
     x: point.x,
     y: point.y,
-    team: index,
+    team,
     playerIndex: index,
     isBot: false,
     name: index === 0 ? 'P1' : 'P2',
@@ -164,6 +168,41 @@ export function spawnBot(
   })
 }
 
+export function spawnBoss(
+  world: World,
+  boss: BossDef,
+  difficulty: Difficulty,
+  point: Vec2,
+): Tank {
+  const scale = bossDifficultyScale(difficulty)
+  const hp = Math.round(boss.hp * scale)
+  return addTank(world, {
+    x: point.x,
+    y: point.y,
+    team: 1,
+    playerIndex: null,
+    isBot: true,
+    name: boss.name,
+    color: boss.color,
+    hp,
+    armor: boss.armor,
+    speed: boss.speed,
+    turnRate: boss.turnRate,
+    turretTurnRate: boss.turretTurnRate,
+    hullAngle: world.rng.angle(),
+    difficulty,
+    fireScale: boss.reloadScale,
+    weapons: boss.weapons,
+    ammo: bossAmmo(boss.weapons),
+    radius: boss.radius,
+    isBoss: true,
+    bossName: boss.name,
+    bossTitle: boss.title,
+    damageScale: boss.damageScale * scale,
+    bounty: boss.bounty,
+  })
+}
+
 interface TankInit {
   x: number
   y: number
@@ -183,6 +222,12 @@ interface TankInit {
   weapons?: WeaponId[]
   skin?: SkinId | null
   ammo?: Record<WeaponId, number>
+  radius?: number
+  isBoss?: boolean
+  bossName?: string | null
+  bossTitle?: string | null
+  damageScale?: number
+  bounty?: number
 }
 
 function addTank(world: World, init: TankInit): Tank {
@@ -202,7 +247,7 @@ function addTank(world: World, init: TankInit): Tank {
     hp: init.hp,
     maxHp: init.hp,
     armor: init.armor,
-    radius: PLAYER_STATS.radius,
+    radius: init.radius ?? PLAYER_STATS.radius,
     speed: init.speed,
     turnRate: init.turnRate,
     turretTurnRate: init.turretTurnRate,
@@ -229,6 +274,12 @@ function addTank(world: World, init: TankInit): Tank {
     kills: 0,
     deaths: 0,
     lastHitBy: null,
+    isBoss: init.isBoss ?? false,
+    bossName: init.bossName ?? null,
+    bossTitle: init.bossTitle ?? null,
+    enraged: false,
+    damageScale: init.damageScale ?? 1,
+    bounty: init.bounty ?? COINS_PER_KILL,
     ai: init.difficulty
       ? {
           difficulty: init.difficulty,
@@ -370,14 +421,53 @@ export function addPickup(
 
 export function damageObstacle(world: World, obstacle: Obstacle, amount: number): boolean {
   if (!obstacle.alive) return false
-  if (obstacle.kind !== 'crate') return false
+  if (!Number.isFinite(obstacle.hp)) return false
+
   obstacle.hp -= amount
-  if (obstacle.hp <= 0) {
-    obstacle.alive = false
-    world.grid.rebuild(world.obstacles.filter((o) => o.alive))
-    return true
+  if (obstacle.hp > 0) return false
+
+  obstacle.hp = 0
+  obstacle.alive = false
+  world.grid.rebuild(world.obstacles.filter((o) => o.alive))
+  destroyFx(world, obstacle)
+  return true
+}
+
+/** Collapse visuals for cover that has just been destroyed. */
+function destroyFx(world: World, obstacle: Obstacle): void {
+  const theme = world.map.theme
+  const x = obstacle.x + obstacle.w / 2
+  const y = obstacle.y + obstacle.h / 2
+
+  switch (obstacle.kind) {
+    case 'building':
+      debris(world, x, y, theme.buildingRoof, 14, 210)
+      debris(world, x, y, theme.building, 10, 170)
+      smokePuff(world, x, y, Math.min(46, obstacle.w * 0.35), 'rgba(70,66,60,0.55)')
+      smokePuff(world, x, y, Math.min(32, obstacle.h * 0.3), 'rgba(90,84,74,0.45)')
+      ring(world, x, y, Math.max(obstacle.w, obstacle.h) * 0.55, theme.roadLine, 0.5)
+      world.shake = Math.min(18, world.shake + 4)
+      world.events.push('explosion')
+      break
+    case 'rock':
+      debris(world, x, y, theme.rock, 10, 180)
+      smokePuff(world, x, y, Math.min(30, obstacle.w * 0.4), 'rgba(84,80,72,0.4)')
+      world.shake = Math.min(18, world.shake + 2)
+      world.events.push('hit')
+      break
+    case 'tree':
+      debris(world, x, y, theme.treeTop, 8, 150)
+      debris(world, x, y, theme.tree, 5, 110)
+      world.events.push('hit')
+      break
+    case 'crate':
+      debris(world, x, y, theme.crateTop, 7, 150)
+      smokePuff(world, x, y, 16, 'rgba(80,66,45,0.35)')
+      world.events.push('hit')
+      break
+    case 'wall':
+      break
   }
-  return false
 }
 
 /** Pick a spawn point far away from living players. */

@@ -9,7 +9,8 @@ import type {
 import type { PlayerControls, SfxName, Tank, World } from './types'
 import { EMPTY_CONTROLS } from './types'
 import { getMap } from '../data/maps'
-import { DIFFICULTY } from '../data/balance'
+import { DIFFICULTY, BOSS_ENRAGE_AT, FLAG_CAPTURE_COINS, FLAG_CAPTURE_SCORE } from '../data/balance'
+import { BOSSES } from '../data/bosses'
 import { CORE_WEAPONS, WEAPON_ORDER } from '../data/weapons'
 import { DEFAULT_SKIN } from '../data/skins'
 import {
@@ -20,6 +21,7 @@ import {
   randomPickupKind,
   resetTank,
   spawnBot,
+  spawnBoss,
   spawnPlayer,
 } from './world'
 import { applyControls, tickTank } from './systems/movement'
@@ -27,6 +29,7 @@ import { updateFiring } from './systems/weapons'
 import { stepTanks } from './systems/collision'
 import { updateProjectiles } from './systems/projectiles'
 import { updatePickups } from './systems/pickups'
+import { initFlags, updateFlags } from './systems/flags'
 import { ring, updateParticles } from './systems/particles'
 import { sampleBot } from './ai'
 import { pointInRect } from './math'
@@ -44,6 +47,7 @@ function resolveOptions(options: MatchOptions): ResolvedMatchOptions {
     targetKills: options.targetKills ?? 10,
     players: options.players ?? 1,
     seed: options.seed ?? Math.floor(Math.random() * 1e9),
+    bossId: options.bossId,
     loadout: options.loadout ?? {
       weapons: WEAPON_ORDER,
       skin: DEFAULT_SKIN,
@@ -88,6 +92,10 @@ export class Game {
       this.world.respawn = true
       this.world.respawnDelay = 7
       this.world.respawnPlayers = false
+    } else if (this.options.objective === 'ctf') {
+      this.world.respawn = true
+      this.world.respawnDelay = 6
+      this.world.respawnPlayers = true
     }
 
     this.setupMatch()
@@ -101,17 +109,31 @@ export class Game {
       ? { weapons: CORE_WEAPONS, skin: DEFAULT_SKIN, boosters: [] }
       : this.options.loadout
 
-    spawnPlayer(w, 0, spawns[0], playerLoadout)
+    spawnPlayer(w, 0, spawns[0], playerLoadout, 0)
     if (this.options.players === 2) {
-      spawnPlayer(w, 1, spawns[1] ?? spawns[0], {
-        weapons: CORE_WEAPONS,
-        skin: null,
-        boosters: [],
-      })
+      spawnPlayer(
+        w,
+        1,
+        spawns[1] ?? spawns[0],
+        {
+          weapons: CORE_WEAPONS,
+          skin: null,
+          boosters: [],
+        },
+        this.options.objective === 'ctf' ? 0 : 1,
+      )
     }
 
     if (this.options.objective !== 'versus') {
+      const boss = this.options.bossId ? BOSSES[this.options.bossId] : undefined
+      if (boss) {
+        spawnBoss(w, boss, this.options.difficulty, pickBotSpawn(w, 260))
+      }
       this.spawnBots(this.options.botCount)
+    }
+
+    if (this.options.objective === 'ctf') {
+      initFlags(w)
     }
 
     // Guarantee one repair and one ammo crate so every arena opens with recoverable resources.
@@ -132,6 +154,13 @@ export class Game {
     } else if (w.objective === 'versus') {
       w.message = 'LAST TANK STANDING'
       w.messageTimer = 2.5
+    } else if (w.objective === 'ctf') {
+      w.message = 'CAPTURE THE ENEMY FLAG'
+      w.messageTimer = 3
+    } else if (this.options.bossId) {
+      const boss = BOSSES[this.options.bossId]
+      w.message = boss ? `BOSS: ${boss.name.toUpperCase()}` : 'BOSS ENGAGED'
+      w.messageTimer = 3
     }
   }
 
@@ -192,13 +221,38 @@ export class Game {
     stepTanks(w, dt)
     updateProjectiles(w, dt)
     updatePickups(w, dt)
+    const flagCapture = updateFlags(w, dt)
     updateParticles(w, dt)
     this.updatePickupSpawner(dt)
+    this.updateBosses()
     this.updateMode(dt)
     this.updateRespawns()
+    if (flagCapture === 'player') {
+      w.score += FLAG_CAPTURE_SCORE
+      w.coinsEarned += FLAG_CAPTURE_COINS
+      this.finish(true, 'Enemy flag captured')
+    } else if (flagCapture === 'enemy') {
+      this.finish(false, 'Your flag was captured')
+    }
     this.updatePendingEnd(dt)
     this.emitSfx()
     this.emitHudMaybe(dt)
+  }
+
+  private updateBosses(): void {
+    const w = this.world
+    for (const tank of w.tanks) {
+      if (!tank.isBoss || !tank.alive || tank.enraged) continue
+      if (tank.hp / tank.maxHp > BOSS_ENRAGE_AT) continue
+      tank.enraged = true
+      tank.reloadScale *= 1.25
+      tank.damageScale *= 1.2
+      tank.speed *= 1.08
+      w.message = `${tank.name.toUpperCase()} ENRAGED`
+      w.messageTimer = 2.4
+      w.events.push('wave')
+      ring(w, tank.x, tank.y, 72, tank.color, 0.7)
+    }
   }
 
   private updateMode(dt: number): void {
@@ -209,7 +263,12 @@ export class Game {
     const alivePlayers = players.filter((t) => t.alive)
     const enemies = w.tanks.filter((t) => t.isBot && t.alive)
 
-    if (w.objective !== 'deathmatch' && players.length > 0 && alivePlayers.length === 0) {
+    if (
+      w.objective !== 'deathmatch' &&
+      w.objective !== 'ctf' &&
+      players.length > 0 &&
+      alivePlayers.length === 0
+    ) {
       this.finish(false, 'Your tank was destroyed')
       return
     }
@@ -273,6 +332,9 @@ export class Game {
         else if (!a.alive) this.finish(false, `${b.name} wins`)
         break
       }
+      case 'ctf':
+        // Flag captures are resolved by updateFlags().
+        break
     }
   }
 
@@ -342,6 +404,7 @@ export class Game {
       time: w.time,
       levelId: this.options.levelId,
       mode: this.options.mode,
+      difficulty: this.options.difficulty,
       detail,
       coinsEarned: w.coinsEarned,
       players: players.map((p) => ({
@@ -376,6 +439,18 @@ export class Game {
         const b = w.tanks.find((t) => t.playerIndex === 1)
         return `${a?.name ?? 'P1'} vs ${b?.name ?? 'P2'}`
       }
+      case 'ctf': {
+        const ownFlag = w.flags.find((flag) => flag.team === 0)
+        const enemyFlag = w.flags.find((flag) => flag.team === 1)
+        if (!ownFlag || !enemyFlag) return 'Capture the flag'
+        if (enemyFlag.carriedBy !== null) return 'Carry the enemy flag home'
+        if (ownFlag.carriedBy !== null) {
+          const carrier = w.tanks.find((tank) => tank.id === ownFlag.carriedBy)
+          return carrier ? `Your flag taken by ${carrier.name}` : 'Your flag was taken'
+        }
+        if (ownFlag.dropped) return 'Recover your flag'
+        return enemyFlag.revealed ? 'Enemy flag located' : 'Search for the enemy flag'
+      }
     }
   }
 
@@ -400,6 +475,10 @@ export class Game {
       }
       case 'versus':
         return 0
+      case 'ctf': {
+        const enemyFlag = w.flags.find((flag) => flag.team === 1)
+        return enemyFlag?.carriedBy !== null && enemyFlag?.carriedBy !== undefined ? 0.5 : 0
+      }
     }
   }
 
@@ -430,6 +509,7 @@ export class Game {
   getHud(): HudSnapshot {
     const w = this.world
     const players = w.tanks.filter((t) => t.playerIndex !== null)
+    const boss = w.tanks.find((tank) => tank.isBoss && tank.alive)
     return {
       status: w.status,
       paused: this.paused,
@@ -446,6 +526,27 @@ export class Game {
       score: w.score,
       kills: w.kills,
       coins: w.coinsEarned,
+      boss: boss
+        ? {
+            name: boss.bossName ?? boss.name,
+            title: boss.bossTitle ?? '',
+            hp: Math.max(0, Math.round(boss.hp)),
+            maxHp: boss.maxHp,
+            enraged: boss.enraged,
+          }
+        : null,
+      flags: w.flags.map((flag) => {
+        const carrier =
+          flag.carriedBy !== null
+            ? w.tanks.find((tank) => tank.id === flag.carriedBy) ?? null
+            : null
+        return {
+          owner: flag.team === 0 ? 'player' : 'enemy',
+          status:
+            flag.carriedBy !== null ? 'carried' : flag.dropped ? 'dropped' : 'home',
+          carrier: carrier?.name ?? null,
+        }
+      }),
     }
   }
 

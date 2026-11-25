@@ -9,6 +9,7 @@ import { prefersTouch } from '../settings'
 import { Hud } from './Hud'
 import { TouchControls } from './TouchControls'
 import { formatScore, formatTime } from './labels'
+import { DIFFICULTY_LABEL } from '../data/balance'
 
 interface Props {
   options: MatchOptions
@@ -18,6 +19,13 @@ interface Props {
   onPlayNext: (options: MatchOptions) => void
   onExit: () => void
   onComplete: (result: MatchResult) => void
+}
+
+const MODE_LABEL: Record<MatchResult['mode'], string> = {
+  campaign: 'Campaign',
+  skirmish: 'Skirmish',
+  versus: 'Local Versus',
+  ctf: 'Capture the Flag',
 }
 
 export function GameScreen({
@@ -208,6 +216,12 @@ export function GameScreen({
               {result.victory ? 'Victory' : 'Defeat'}
             </h1>
             <p className="sub">{result.detail}</p>
+
+            <div className="level-meta" style={{ justifyContent: 'center', marginBottom: 18 }}>
+              <span className="tag accent">{MODE_LABEL[result.mode]}</span>
+              <span className="tag cyan">{DIFFICULTY_LABEL[result.difficulty]}</span>
+              {result.mode === 'ctf' && <span className="tag">First capture wins</span>}
+            </div>
 
             <div className="result-stats">
               <div className="result-stat">
